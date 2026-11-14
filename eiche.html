@@ -1,0 +1,778 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Eiche</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#efe4cc;--ink:#1b1a17;--red:#d8352a;--pink:#f08a83;--blue:#2e6ea6;--mustard:#f1b73a;--olive:#6f8a3a;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--paper);color:var(--ink);font-family:"Jost",Futura,"Century Gothic",sans-serif}
+#c{position:fixed;inset:0;display:block}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+#hits{position:fixed;inset:0;pointer-events:none}
+
+h1#title{
+  position:fixed;left:4vw;top:3.5vh;margin:0;pointer-events:none;
+  font:800 clamp(56px,11vw,150px)/.82 "Jost",Futura,sans-serif;letter-spacing:-.01em;
+}
+#sub{position:fixed;left:calc(4vw + 4px);top:calc(3.5vh + clamp(56px,11vw,150px)*.86);font:600 12px/1 "Jost",sans-serif;letter-spacing:.32em;text-transform:uppercase;pointer-events:none}
+
+/* every interactive thing is a real, invisible button over the canvas */
+.hit{
+  position:absolute;left:0;top:0;width:44px;height:44px;border-radius:50%;
+  appearance:none;border:0;padding:0;margin:0;background:transparent;color:inherit;
+  pointer-events:auto;cursor:pointer;-webkit-tap-highlight-color:transparent;
+}
+.hit[aria-disabled="true"]{cursor:default}
+.hit:focus{outline:none}
+.hit:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.hit.sq{border-radius:4px}
+
+/* tertiary: poster typography that is also a button */
+#wordmark{position:fixed;right:4vw;bottom:2.4vh;text-align:right;pointer-events:none}
+#wordmark .lbl{display:block;font:600 12px/1 "Jost",sans-serif;letter-spacing:.32em;text-transform:uppercase;margin-bottom:4px}
+.type{
+  pointer-events:auto;appearance:none;border:0;background:none;padding:4px 0 12px;margin:0;cursor:pointer;position:relative;
+  min-height:44px;font:700 clamp(30px,4vw,46px)/1 "Jost",Futura,sans-serif;letter-spacing:.01em;color:var(--ink);
+  transition:color .15s,transform .12s;
+}
+.type::after{content:"";position:absolute;left:0;right:0;bottom:3px;height:0;background:var(--red);transition:height .15s}
+.type:hover{color:var(--red)}
+.type:hover::after{height:6px}
+.type:active{transform:translateY(2px)}
+.type:active::after{height:10px}
+.type:focus{outline:none}
+.type:focus-visible{outline:2px solid var(--ink);outline-offset:4px}
+.type[aria-disabled="true"]{color:rgba(27,26,23,.22);cursor:default;transform:none}
+.type[aria-disabled="true"]::after{height:0}
+.type span{display:inline-block}
+
+#caption{
+  position:fixed;left:0;top:0;pointer-events:none;white-space:nowrap;
+  font:600 12px/1 "Jost",sans-serif;letter-spacing:.24em;text-transform:uppercase;
+  background:var(--paper);color:var(--ink);padding:6px 8px 5px 10px;opacity:0;transition:opacity .15s;
+}
+#toast{position:fixed;left:50%;bottom:4vh;transform:translateX(-50%);font:600 11px/1 "Jost",sans-serif;letter-spacing:.3em;text-transform:uppercase;opacity:0;transition:opacity .4s;pointer-events:none}
+
+#specToggle{
+  position:fixed;right:4vw;top:3vh;appearance:none;border:0;background:none;cursor:pointer;
+  font:600 11px/1 "Jost",sans-serif;letter-spacing:.3em;text-transform:uppercase;color:rgba(239,228,204,.6);padding:10px;
+}
+#specToggle:hover,#specToggle:focus-visible{color:var(--paper);outline:none}
+
+/* ---------- specimen sheet ---------- */
+#sheetBg{position:fixed;inset:0;z-index:19;background:var(--paper);display:none}
+#sheet{position:fixed;inset:0;z-index:21;overflow:auto;display:none}
+body.spec #sheet,body.spec #sheetBg{display:block}
+body.spec #specToggle{color:var(--ink);z-index:22}
+body.spec h1#title,body.spec #sub{z-index:20}
+/* scrolled down the sheet, the title recedes into the paper; closing brings the ink back */
+h1#title,#sub{transition:color .5s ease}
+body.spec.faded h1#title,body.spec.faded #sub{color:#e2d5b8}
+.plate{padding:calc(3.5vh + clamp(56px,11vw,150px)*.86 + 40px) 4vw 90px}
+.kicker{font:600 11px/1.5 "Jost",sans-serif;letter-spacing:.3em;text-transform:uppercase}
+.ph{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;border-bottom:3px solid var(--ink);padding-bottom:18px}
+.ph .kicker+.kicker{margin-top:6px}
+.marks{display:flex;gap:14px;align-items:flex-end}
+.marks i{display:block}
+.m-c{width:44px;height:44px;border-radius:50%;background:var(--blue)}
+.m-s{width:44px;height:44px;background:var(--red)}
+.m-t{width:0;height:0;border-left:25px solid transparent;border-right:25px solid transparent;border-bottom:44px solid var(--mustard)}
+.sec{padding:22px 0;border-bottom:1.5px solid var(--ink)}
+.sec h3{font:700 13px/1 "Jost",sans-serif;letter-spacing:.24em;text-transform:uppercase;margin:0 0 16px}
+.sws{display:flex;flex-wrap:wrap;gap:14px}
+.sw{width:112px;font:600 11px/1.4 "Jost",sans-serif}
+.sw b{display:block;height:58px;border:1.5px solid var(--ink);margin-bottom:6px}
+.sw small{display:block;font-weight:500;opacity:.6;letter-spacing:.04em}
+.types{display:flex;flex-wrap:wrap;gap:48px;align-items:flex-end}
+.types div{font:500 12px/1.4 "Jost",sans-serif}
+.types b{display:block;line-height:1;margin-bottom:6px}
+.scroll{overflow-x:auto}
+.table{min-width:1120px}
+.gh,.row{display:grid;grid-template-columns:136px repeat(5,150px) minmax(210px,1fr);column-gap:10px;align-items:center}
+.gh{padding:16px 0 10px;border-bottom:1.5px solid var(--ink)}
+.row{padding:18px 0;border-bottom:1.5px solid var(--ink)}
+.rh .no{font:800 34px/1 "Jost",sans-serif}
+.rh .nm{font:700 20px/1.1 "Jost",sans-serif;margin:8px 0 6px}
+.rh .role{font:600 10px/1.5 "Jost",sans-serif;letter-spacing:.22em;text-transform:uppercase;opacity:.65}
+.cw{height:150px;display:grid;place-items:center;background:#f6eedc;box-shadow:inset 0 0 0 1px rgba(27,26,23,.14);position:relative}
+.cw em{position:absolute;left:8px;top:7px;font:600 9px/1 "Jost",sans-serif;letter-spacing:.2em;text-transform:uppercase;font-style:normal;opacity:.5}
+dl.meta{font:500 12px/1.45 "Jost",sans-serif;display:grid;grid-template-columns:66px 1fr;gap:3px 10px;margin:0 0 0 12px}
+dl.meta dt{font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;opacity:.55;padding-top:2px}
+dl.meta dd{margin:0}
+.notes{columns:2 300px;column-gap:40px;font:500 13px/1.55 "Jost",sans-serif}
+.notes p{margin:0 0 10px;break-inside:avoid}
+.notes kbd{font:inherit;border:1.5px solid var(--ink);padding:0 5px}
+.plate .type{font-size:40px;pointer-events:none}
+.type.is-hover,.type.is-pressed{color:var(--red)}
+.type.is-hover::after{height:6px}
+.type.is-pressed{transform:translateY(2px)}
+.type.is-pressed::after{height:10px}
+.type.is-focus{outline:2px solid var(--ink);outline-offset:4px}
+</style>
+</head>
+<body>
+<canvas id="c" aria-hidden="true"></canvas>
+<h1 id="title">EICHE</h1>
+<div id="sub" aria-hidden="true">Quercus · 2026</div>
+<div id="hits" aria-label="Oak on a hill"></div>
+<div id="wordmark"><span class="lbl" aria-hidden="true">Wind</span></div>
+<div id="caption" aria-hidden="true"></div>
+<div id="toast" aria-live="polite"></div>
+<button id="specToggle" aria-expanded="false" aria-controls="sheet">spec</button>
+
+<div id="sheetBg"></div>
+<div id="sheet" role="dialog" aria-label="Specimen sheet"><div class="plate" id="plate"></div></div>
+<div id="groveStatus" class="sr" aria-live="polite"></div>
+
+<script>
+/* ============================================================
+   setup
+   ============================================================ */
+const cv=document.getElementById('c');let ctx=cv.getContext('2d'),NOGRAIN=false;
+const hits=document.getElementById('hits'),caption=document.getElementById('caption');
+const RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const AMP=RM?.35:1;
+const C={paper:'#efe4cc',ink:'#1b1a17',red:'#d8352a',pink:'#f08a83',blue:'#2e6ea6',blue2:'#3f86c0',deep:'#1f4f86',
+  mustard:'#f1b73a',orange:'#e8673a',olive:'#6f8a3a',sage:'#a7b47a',green:'#5f8a3c',green2:'#4c7434',pine:'#2d5a3a',teal:'#3a8a7c'};
+const LEVELS=[.08,.45,1],NAMES=['Calm','Breeze','Gale'];
+const S={wind:.45,level:1,hushed:false,speed:new URLSearchParams(location.search).has('fast')?30:1};
+const GROW_MS=4*60*1000,ACORN_REGROW=40,LEAF_REGROW=30,MAX_SAPLINGS=9;
+let W,H,T,k,mx=-999,my=-999,FOOT;
+
+function rng(seed){return()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const TAU=Math.PI*2;
+
+/* ground: a hill with the oak on top; the paper footer sits below it */
+function ground(x){
+  const cx=W*.5,w=Math.max(W*.18,180);
+  return H*.8-H*.2*Math.exp(-(((x-cx)/w)**2));
+}
+const slope=x=>(ground(x+1)-ground(x-1))/2;
+
+/* ============================================================
+   texture: a static grain laid over everything, like ink on paper
+   ============================================================ */
+let grainDark,grainLight;
+function makeGrain(){
+  const mk=(fn)=>{const c=document.createElement('canvas');c.width=c.height=200;const g=c.getContext('2d'),d=g.createImageData(200,200);
+    const R=rng(fn.seed);for(let i=0;i<d.data.length;i+=4){const [r,gg,b,a]=fn(R);d.data[i]=r;d.data[i+1]=gg;d.data[i+2]=b;d.data[i+3]=a}g.putImageData(d,0,0);return ctx.createPattern(c,'repeat')};
+  const dark=R=>{const v=R();return[45,35,25,Math.pow(v,3)*90]};dark.seed=3;
+  const light=R=>{const v=R();return[255,250,236,Math.pow(v,5)*80]};light.seed=9;
+  grainDark=mk(dark);grainLight=mk(light);
+}
+/* Texture lives on the shapes, not over the page. The pattern is anchored to whatever transform is
+   current when this is called, so a crown's grain turns with the crown and an acorn's falls with it.
+   `inv` undoes a local scale so specks stay the same size everywhere. */
+const GD=.3,GL=.2;
+function grain(path,inv=1){
+  if(NOGRAIN)return;
+  const a0=ctx.globalAlpha,m=new DOMMatrix().scale(inv);
+  grainDark.setTransform(m);grainLight.setTransform(m);
+  ctx.save();
+  ctx.globalCompositeOperation='multiply';ctx.globalAlpha=a0*GD;ctx.fillStyle=grainDark;ctx.fill(path);
+  ctx.globalCompositeOperation='source-over';ctx.globalAlpha=a0*GL;ctx.fillStyle=grainLight;ctx.fill(path);
+  ctx.restore();
+}
+
+/* ============================================================
+   the oak: black limbs, crowns of quartered circles
+   ============================================================ */
+const LIMBS=[
+  {at:1,  a:-.04,len:.25,r:.155,pal:0,v:0,phase:.3},
+  {at:1,  a:-1.02,len:.28,r:.125,pal:1,v:1,phase:1.7},
+  {at:1,  a:.98, len:.29,r:.135,pal:0,v:2,phase:2.9},
+  {at:.6, a:-1.42,len:.31,r:.088,pal:1,v:3,phase:4.1},
+  {at:.78,a:1.38,len:.33,r:.094,pal:1,v:4,phase:5.2},
+];
+const PALS=[[C.red,C.pink],[C.pink,C.red],[C.mustard,C.orange],[C.blue2,C.blue],[C.olive,C.sage]];
+const crowns=[];   // filled each frame: {x,y,r,rot,drot}
+
+function drawCrown(x,y,r,rot,pal,v){
+  ctx.save();ctx.translate(x,y);ctx.rotate(rot);
+  const [A,B]=pal,disc=new Path2D();disc.arc(0,0,r,0,TAU);
+  const f=(c,build)=>{ctx.fillStyle=c;ctx.beginPath();build();ctx.fill()};
+  const sector=(rad,a0,a1)=>()=>{ctx.moveTo(0,0);ctx.arc(0,0,rad,a0,a1);ctx.closePath()};
+  const circ=(cx,cy,rad,a0=0,a1=TAU)=>()=>{ctx.arc(cx,cy,rad,a0,a1);ctx.closePath()};
+  ctx.save();ctx.clip(disc);
+  f(A,circ(0,0,r));
+  switch(v%5){
+    case 0: // quarters, an inner quarter and a half-disc on one radius
+      f(B,sector(r,TAU/4,TAU/2));f(B,sector(r,TAU*3/4,TAU));
+      f(B,sector(r*.6,0,TAU/4));f(B,circ(-r*.5,0,r*.5,Math.PI,TAU));break;
+    case 1: // split down the middle, with an inverted centre disc
+      f(B,()=>ctx.rect(0,-r,r,2*r));
+      f(B,circ(0,0,r*.48,Math.PI/2,Math.PI*1.5));f(A,circ(0,0,r*.48,-Math.PI/2,Math.PI/2));break;
+    case 2: // concentric rings
+      f(B,circ(0,0,r*.74));f(A,circ(0,0,r*.5));f(B,circ(0,0,r*.26));break;
+    case 3: // horizontal bands with a small sun
+      f(B,()=>ctx.rect(-r,-r*.5,2*r,r*.5));f(B,()=>ctx.rect(-r,r*.5,2*r,r*.5));
+      f(B,circ(r*.34,-r*.74,r*.2));break;
+    case 4: // an S-curve made of two half-discs
+      f(B,()=>ctx.rect(-r,0,2*r,r));
+      f(B,circ(-r*.5,0,r*.5,Math.PI,TAU));f(A,circ(r*.5,0,r*.5,0,Math.PI));break;
+  }
+  ctx.restore();
+  grain(disc);
+  ctx.strokeStyle=C.paper;ctx.lineWidth=Math.max(2,r*.045);ctx.stroke(disc);
+  ctx.restore();
+}
+function drawOak(t){
+  const bx=W*.5,by=ground(W*.5)+2;
+  const ta=(S.wind*.035+Math.sin(t*.9)*(.004+.01*S.wind))*AMP;
+  const th=.3*T,tw=.05*T;
+  const topX=bx+Math.sin(ta)*th,topY=by-Math.cos(ta)*th;
+  // limbs first, crowns over them
+  ctx.strokeStyle=C.ink;ctx.lineCap='butt';
+  crowns.length=0;
+  for(const L of LIMBS){
+    const sx=bx+Math.sin(ta)*th*L.at,sy=by-Math.cos(ta)*th*L.at;
+    const bend=(S.wind*.11*(1+Math.abs(L.a)*.4)+Math.sin(t*1.25+L.phase)*(.012+.05*S.wind))*AMP;
+    const A=ta+L.a+bend,len=L.len*T;
+    const ex=sx+Math.sin(A)*len,ey=sy-Math.cos(A)*len;
+    ctx.lineWidth=T*.024;ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(ex,ey);ctx.stroke();
+    const drot=(S.wind*.35+Math.sin(t*1.4+L.phase*1.3)*(.03+.09*S.wind))*AMP;
+    crowns.push({x:ex,y:ey,r:L.r*T,rot:L.phase+drot,drot,L});
+  }
+  // trunk: a tapered ink slab
+  ctx.fillStyle=C.ink;ctx.beginPath();
+  ctx.moveTo(bx-tw*.62,by+4);ctx.lineTo(topX-tw*.4,topY);ctx.lineTo(topX+tw*.4,topY);ctx.lineTo(bx+tw*.62,by+4);ctx.closePath();ctx.fill();
+  // draw small crowns first so the big ones overlap them
+  [...crowns].sort((a,b)=>a.r-b.r).forEach(c=>drawCrown(c.x,c.y,c.r,c.rot,PALS[c.L.pal],c.L.v));
+}
+
+/* ============================================================
+   scenery
+   ============================================================ */
+let clouds=[],pines=[];
+function layout(){
+  const R=rng(5);
+  clouds=[{x:W*.7,y:H*.3,s:1},{x:W*.95,y:H*.12,s:.7},{x:W*.45,y:H*.2,s:.85}];
+  pines=[];
+  for(let i=0;i<7;i++)pines.push({x:W*(.02+i*.035)+R()*12,h:(40+R()*60)*Math.max(.7,k),w:.32+R()*.08,p:R()*6});
+  for(let i=0;i<6;i++)pines.push({x:W*(.74+i*.04)+R()*12,h:(40+R()*70)*Math.max(.7,k),w:.32+R()*.08,p:R()*6});
+  layoutShapes();
+}
+function farRidge(base,amp,f,off){
+  return x=>base+amp*Math.sin(x*f+off)+amp*.5*Math.sin(x*f*2.3+off*2);
+}
+let ridge1,ridge2;
+function drawBackdrop(t,dt){
+  ctx.fillStyle=C.paper;ctx.fillRect(0,0,W,H);
+  // blue sky panel with a diagonal, as in a poster
+  ctx.fillStyle=C.blue;ctx.beginPath();ctx.moveTo(W*.6,0);ctx.lineTo(W,0);ctx.lineTo(W,H*.6);ctx.lineTo(W*.6,H*.34);ctx.closePath();ctx.fill();
+  // sun
+  ctx.fillStyle=C.mustard;ctx.beginPath();ctx.arc(W*.82,H*.2,Math.max(34,T*.1),0,TAU);ctx.fill();
+  // layered far hills, softly shaded
+  ridge1=farRidge(H*.6,H*.035,.006,1);ridge2=farRidge(H*.68,H*.03,.008,3);
+  const hill=(fn,top,bot)=>{const g=ctx.createLinearGradient(0,H*.5,0,H*.85);g.addColorStop(0,top);g.addColorStop(1,bot);ctx.fillStyle=g;
+    const p=new Path2D();p.moveTo(0,H);for(let x=0;x<=W;x+=8)p.lineTo(x,fn(x));p.lineTo(W,H);p.closePath();ctx.fill(p);return p};
+  hill(ridge1,C.blue2,C.deep);
+  // everything so far is still, so one screen-anchored pass covers it
+  grain(new Path2D(`M0 0H${W}V${H}H0Z`));
+  // clouds are paper-coloured: they only show while crossing the blue
+  for(const c of clouds){
+    c.x+=(8+S.wind*60)*dt*c.s;if(c.x>W+120*c.s)c.x=W*.55-120;
+    const r=26*Math.max(.8,k)*c.s,p=new Path2D();
+    p.arc(0,0,r,Math.PI,0);p.arc(r*1.4,0,r*.7,Math.PI,0);p.lineTo(r*2.1,0);p.lineTo(-r,0);p.closePath();
+    ctx.save();ctx.translate(c.x,c.y);ctx.fillStyle=C.paper;ctx.fill(p);grain(p);ctx.restore();
+  }
+  // pines on the far ridge, leaning with the wind; grain anchored at each base
+  for(const pn of pines){const y=ridge2(pn.x)+6,lean=(S.wind*pn.h*.08+Math.sin(t*1.1+pn.p)*pn.h*.012*(.3+S.wind))*AMP;
+    const p=new Path2D();p.moveTo(-pn.h*pn.w/2,0);p.lineTo(lean,-pn.h);p.lineTo(pn.h*pn.w/2,0);p.closePath();
+    ctx.save();ctx.translate(pn.x,y);ctx.fillStyle=C.pine;ctx.fill(p);grain(p);ctx.restore()}
+  grain(hill(ridge2,C.teal,'#2c6a5e'));
+}
+function drawHill(){
+  const path=new Path2D();path.moveTo(-10,H);for(let x=-10;x<=W+10;x+=4)path.lineTo(x,ground(x));path.lineTo(W+10,H);path.closePath();
+  ctx.strokeStyle=C.paper;ctx.lineWidth=9;ctx.stroke(path);   // paper gap above the hill
+  const g=ctx.createLinearGradient(W*.3,H*.55,W*.7,H*.95);g.addColorStop(0,'#74a046');g.addColorStop(1,C.green2);
+  ctx.fillStyle=g;ctx.fill(path);grain(path);
+}
+function drawFooter(){
+  FOOT=H-Math.max(76,H*.1);
+  const p=new Path2D();p.rect(0,FOOT,W,H-FOOT);ctx.fillStyle=C.paper;ctx.fill(p);grain(p);
+  ctx.fillStyle=C.ink;ctx.fillRect(0,FOOT,W,2);
+}
+/* the grove ledger: one tile per planted tree, in that tree's colours and pattern */
+function drawTile(x,y,sz,pal,v){
+  if(!pal){ctx.strokeStyle='rgba(27,26,23,.3)';ctx.lineWidth=1;ctx.strokeRect(x+.5,y+.5,sz-1,sz-1);return}
+  const p=new Path2D();p.rect(x,y,sz,sz);
+  ctx.save();ctx.clip(p);ctx.fillStyle=pal[1];ctx.fill(p);grain(p);drawCrown(x+sz/2,y+sz/2,sz*.42,0,pal,v);ctx.restore();
+  ctx.strokeStyle=C.ink;ctx.lineWidth=1.5;ctx.strokeRect(x+.75,y+.75,sz-1.5,sz-1.5);
+}
+function drawLedger(){
+  const n=MAX_SAPLINGS,sz=Math.round(clamp(22*k,18,26)),gap=6,w=n*sz+(n-1)*gap;
+  const x0=Math.round(W/2-w/2),y0=Math.round(FOOT+(H-FOOT)/2-sz/2+8);
+  ctx.save();ctx.font='600 11px Jost';ctx.letterSpacing='3.5px';ctx.fillStyle=C.ink;ctx.textBaseline='alphabetic';
+  ctx.fillText('GROVE',x0,y0-9);
+  ctx.textAlign='right';ctx.fillText(`${saplings.length} / ${n}`,x0+w+3.5,y0-9);ctx.restore();
+  for(let i=0;i<n;i++){const x=x0+i*(sz+gap),sp=saplings[i];if(sp){const st=sapStyle(sp.seed);drawTile(x,y0,sz,st.pal,st.v)}else drawTile(x,y0,sz,null)}
+}
+function announceGrove(){document.getElementById('groveStatus').textContent=`Grove: ${saplings.length} of ${MAX_SAPLINGS} trees planted`}
+
+/* ============================================================
+   interactive elements
+   ============================================================ */
+function makeHit(label,spec,cls='hit'){
+  const b=document.createElement('button');b.className=cls;b.setAttribute('aria-label',label);b.dataset.spec=spec;hits.appendChild(b);return b;
+}
+function wireHover(o){
+  const b=o.btn;
+  b.addEventListener('pointerenter',()=>{o.hover=true});
+  b.addEventListener('pointerleave',()=>{o.hover=false;o.press=false});
+  b.addEventListener('pointerdown',()=>{o.press=true});
+  b.addEventListener('pointerup',()=>{o.press=false});
+  b.addEventListener('focus',()=>{if(b.matches(':focus-visible'))o.focus=true});
+  b.addEventListener('blur',()=>{o.focus=false});
+}
+function setDisabled(b,on,label){b.setAttribute('aria-disabled',on?'true':'false');if(label)b.setAttribute('aria-label',label)}
+let acorns=[],leaves=[],shapes=[],fallers=[],drifters=[],dust=[],saplings=[],word;
+
+/* acorns and leaves live on the crowns' edges: [limb, angle] (0 = right, π/2 = down) */
+const ACORN_SPOTS=[[0,.55],[0,2.35],[1,1.25],[2,.75],[2,1.9],[3,1.55],[4,1.05]];
+const LEAF_SPOTS=[[0,-1.2],[1,-2.4],[2,-.5],[4,-.2]];
+function buildTreeButtons(){
+  ACORN_SPOTS.forEach(([li,phi])=>{
+    const o={li,phi,phase:Math.random()*6.28,on:true,grow:1,regrow:0,hover:false,press:false,focus:false};
+    o.btn=makeHit('Plant an acorn','acorn · 44');wireHover(o);o.btn.addEventListener('click',()=>dropAcorn(o));acorns.push(o);
+  });
+  LEAF_SPOTS.forEach(([li,phi])=>{
+    const o={li,phi,phase:Math.random()*6.28,on:true,grow:1,regrow:0,hover:false,press:false,focus:false};
+    o.btn=makeHit('Let a leaf go','leaf · 44');wireHover(o);o.btn.addEventListener('click',()=>dropLeaf(o));leaves.push(o);
+  });
+}
+const edge=(o)=>{const c=crowns[o.li],a=o.phi+c.drot;return{x:c.x+Math.cos(a)*c.r,y:c.y+Math.sin(a)*c.r,a}};
+
+/* ---------- acorn ---------- */
+const AS=()=>Math.max(1.15,k*1.55);
+function acornPose(o,t){
+  const e=edge(o);
+  let th=(S.wind*.5+Math.sin(t*2.2+o.phase)*(.05+.2*S.wind))*AMP;
+  let hang=11*AS();
+  if(o.hover){th+=clamp((mx-e.x)/200,-.3,.3);hang+=3*AS()}
+  return{x:e.x+Math.sin(th)*hang,y:e.y+Math.cos(th)*hang,rot:-th,ax:e.x,ay:e.y};
+}
+function drawAcorn(x,y,rot,s,{hover=false,capOnly=false,glint=0,alpha=1,stalk=true}={}){
+  ctx.save();ctx.globalAlpha=alpha;ctx.translate(x,y);ctx.rotate(rot);ctx.scale(s,s);
+  if(stalk){ctx.fillStyle=C.ink;ctx.fillRect(-.9,-11,1.8,6)}
+  if(!capOnly){
+    const nut=new Path2D();nut.arc(0,1.5,6,0,TAU);nut.moveTo(-2,6.6);nut.lineTo(0,10);nut.lineTo(2,6.6);
+    ctx.fillStyle=hover?C.orange:C.mustard;ctx.fill(nut);grain(nut,1/s);
+    if(hover){ctx.strokeStyle=C.ink;ctx.lineWidth=2/s*1;ctx.beginPath();ctx.arc(0,0,11.5,0,TAU);ctx.stroke()}
+    if(glint>.05){ctx.globalAlpha=alpha*glint;ctx.fillStyle=C.paper;ctx.beginPath();ctx.moveTo(0,1.5);ctx.arc(0,1.5,4.2,Math.PI,Math.PI*1.5);ctx.closePath();ctx.fill();ctx.globalAlpha=alpha}
+    ctx.fillStyle=C.ink;ctx.beginPath();ctx.arc(0,-.5,7.5,Math.PI,0);ctx.closePath();ctx.fill();
+  }else{
+    ctx.strokeStyle=C.ink;ctx.lineWidth=1.6;ctx.beginPath();ctx.arc(0,-.5,7,Math.PI,0);ctx.closePath();ctx.stroke();
+  }
+  ctx.restore();
+}
+function dropAcorn(o){
+  if(!o.on||o.grow<1)return;
+  const p=acornPose(o,performance.now()/1000);
+  o.on=false;o.hover=false;o.regrow=ACORN_REGROW;
+  setDisabled(o.btn,true,'Acorn regrowing');
+  fallers.push({x:p.x,y:p.y,rot:p.rot,vx:S.wind*30+(Math.random()-.5)*40,vy:-30,mode:'air',v:0,fr:1.1+Math.random()*1.2,rr:110+Math.random()*190,tries:0,alpha:1,t:0});
+  hideWhisper();
+}
+
+/* ---------- leaf ---------- */
+function leafShape(L){const p=new Path2D();p.moveTo(0,0);p.quadraticCurveTo(L*.5,-L*.34,L,0);p.quadraticCurveTo(L*.5,L*.34,0,0);return p}
+let leafP;
+function leafPose(o,t){
+  const e=edge(o),fl=o.hover?3:1;
+  let a=e.a+(S.wind*.4+Math.sin(t*2.4*fl+o.phase)*(.08+.25*S.wind)*(o.hover?1.6:1))*AMP;
+  if(o.press)a+=.4;
+  return{x:e.x,y:e.y,a};
+}
+function drawLeaf(x,y,a,s,color,alpha=1){
+  ctx.save();ctx.globalAlpha=alpha;ctx.translate(x,y);ctx.rotate(a);ctx.scale(s,s);
+  ctx.fillStyle=color;ctx.fill(leafP);grain(leafP,1/s);ctx.strokeStyle=C.ink;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(1,0);ctx.lineTo(14,0);ctx.stroke();ctx.restore();
+}
+function dropLeaf(o){
+  if(!o.on||o.grow<1)return;
+  const p=leafPose(o,performance.now()/1000);
+  o.on=false;o.hover=false;o.regrow=LEAF_REGROW;setDisabled(o.btn,true,'Leaf regrowing');
+  drifters.push({x:p.x,y:p.y,rot:p.a,vx:S.wind*80,vy:0,ph:Math.random()*6.28,rest:0,alpha:1});
+}
+
+/* ---------- shapes (button group) ---------- */
+function layoutShapes(){
+  const defs=[{kind:'circle',label:'Calm',fill:C.blue},{kind:'square',label:'Breeze',fill:C.red},{kind:'triangle',label:'Gale',fill:C.mustard}];
+  const sz=30*Math.max(1,Math.min(1.3,k*1.2)),gap=18;
+  const footTop=H-Math.max(76,H*.1),cy=footTop+(H-footTop)/2+2;
+  let x=Math.max(24,W*.04)+sz/2;
+  defs.forEach((d,i)=>{const s=shapes[i]||{};Object.assign(s,d,{x,y:cy,sz,i});x+=sz+gap;shapes[i]=s});
+}
+function shapePath(s,dx=0,dy=0){
+  const p=new Path2D(),h=s.sz/2,x=s.x+dx,y=s.y+dy;
+  if(s.kind==='circle')p.arc(x,y,h,0,TAU);
+  else if(s.kind==='square')p.rect(x-h*.9,y-h*.9,h*1.8,h*1.8);
+  else{p.moveTo(x,y-h);p.lineTo(x+h*1.08,y+h*.85);p.lineTo(x-h*1.08,y+h*.85);p.closePath()}
+  return p;
+}
+function drawShape(s,{sel=false,hover=false,press=false,disabled=false}={}){
+  ctx.lineJoin='miter';
+  if(disabled){ctx.save();ctx.setLineDash([3,3]);ctx.strokeStyle='rgba(27,26,23,.35)';ctx.lineWidth=2;ctx.stroke(shapePath(s));ctx.restore();return}
+  const off=4,shift=press?3:0,inked=sel||press;
+  if(inked){ctx.fillStyle=C.ink;ctx.fill(shapePath(s,off,off))}
+  const p=shapePath(s,shift,shift);
+  if(inked){ctx.fillStyle=s.fill;ctx.fill(p);grain(p)}
+  else if(hover){ctx.fillStyle='#f8f1e2';ctx.fill(p);grain(p)}
+  ctx.strokeStyle=C.ink;ctx.lineWidth=2;ctx.stroke(p);
+}
+function drawShapes(){for(const s of shapes)drawShape(s,{sel:S.level===s.i,hover:s.hover||s.focus,press:s.press})}
+
+/* ============================================================
+   falling, rolling, planting, growing
+   ============================================================ */
+function stepFallers(dt){
+  const G=1400;
+  for(const f of fallers){
+    const r=7*AS();f.t+=dt;
+    if(f.mode==='air'){
+      f.vy+=G*dt;f.vx+=S.wind*40*dt;f.x+=f.vx*dt;f.y+=f.vy*dt;f.rot+=f.vx*.1*dt;
+      if(f.y>=ground(f.x)-r){
+        f.y=ground(f.x)-r;
+        const m=slope(f.x),L=Math.hypot(1,m);
+        let vt=(f.vx+f.vy*m)/L,vn=(-m*f.vx+f.vy)/L;
+        f.bounces=(f.bounces||0)+1;
+        if(vn>170&&f.bounces<3){vn=-vn*.3;vt*=.35;f.vx=(vt-vn*m)/L;f.vy=(vt*m+vn)/L;f.y-=1}
+        else{
+          // commit to rolling downhill, away from the tree; it never reverses
+          f.mode='roll';f.dir=Math.abs(m)>.02?Math.sign(m):Math.sign(f.x-W/2)||1;
+          f.v=Math.max(40,Math.abs(vt)*.5);
+        }
+      }
+    }else if(f.mode==='roll'){
+      // speed is a magnitude along f.dir: gravity down the slope, rolling resistance, drag
+      const m=slope(f.x),L=Math.hypot(1,m);
+      f.v+=G*(m*f.dir)/L*dt-(f.rr+f.fr*f.v)*dt;
+      if(f.v<0)f.v=0;
+      f.x+=f.dir*f.v/L*dt;f.y=ground(f.x)-r;f.rot+=f.dir*f.v/r*dt;
+      const atEdge=f.x<20||f.x>W-20;
+      if(atEdge)f.x=clamp(f.x,20,W-20);
+      if(f.v<20&&Math.abs(m)<.3||atEdge){
+        const crowded=saplings.some(s=>Math.abs(s.xf*W-f.x)<40)||fallers.some(o=>o!==f&&o.mode==='sink'&&Math.abs(o.x-f.x)<40);
+        if(crowded&&!atEdge&&f.tries<8){f.tries++;f.v=70}           // keep going the same way, gently
+        else if(crowded||saplings.length>=MAX_SAPLINGS){f.mode='fade'}
+        else{f.mode='sink';f.t=0;f.rot0=f.rot;puff(f.x,ground(f.x))}
+      }
+    }else if(f.mode==='sink'){
+      // one small settling rock, then it sinks in
+      f.rot=f.rot0+Math.sin(f.t*18)*Math.exp(-f.t*7)*.25;
+      const k2=clamp((f.t-.35)/.85,0,1);
+      f.y=ground(f.x)-r+r*1.3*k2;f.alpha=1-k2*.8;
+      if(f.t>=1.2&&k2>=1){f.done=true;saplings.push({xf:f.x/W,born:Date.now(),seed:Math.floor(Math.random()*1e6)});saveGrove();announceGrove()}
+    }else if(f.mode==='fade'){f.alpha-=dt/3;if(f.alpha<=0)f.done=true}
+  }
+  fallers=fallers.filter(f=>!f.done);
+}
+/* planting kicks up a little burst of paper-coloured squares */
+function puff(x,y){for(let i=0;i<8;i++)dust.push({x,y:y-2,vx:(Math.random()-.5)*60,vy:-30-Math.random()*40,a:1,s:2+Math.random()*3,c:i%3?C.paper:C.mustard})}
+function stepDust(dt){
+  for(const d of dust){d.x+=d.vx*dt;d.y+=d.vy*dt;d.vy+=70*dt;d.a-=dt*.9}
+  dust=dust.filter(d=>d.a>0);
+  for(const d of dust){ctx.globalAlpha=d.a;ctx.fillStyle=d.c;ctx.fillRect(d.x-d.s/2,d.y-d.s/2,d.s,d.s)}
+  ctx.globalAlpha=1;
+}
+function stepDrifters(dt,t){
+  for(const d of drifters){
+    if(!d.rest){
+      d.vy=Math.min(45,d.vy+60*dt);d.vx+=(S.wind*150-d.vx)*dt*1.2;
+      d.x+=d.vx*dt+Math.sin(t*3+d.ph)*22*dt;d.y+=d.vy*dt;d.rot+=Math.sin(t*2+d.ph)*dt*2.4;
+      if(d.y>=ground(d.x)-2){d.y=ground(d.x)-2;d.rest=t}
+      if(d.x>W+40||d.x<-40)d.alpha=0;
+    }else if(t-d.rest>5)d.alpha-=dt/3;
+    drawLeaf(d.x,d.y,d.rot,AS(),C.olive,Math.max(0,d.alpha));
+  }
+  drifters=drifters.filter(d=>d.alpha>0);
+}
+/* saplings: a stick, then one, two, three quartered crowns */
+function drawSaplings(t){
+  for(const s of saplings){
+    const g=clamp((Date.now()-s.born)/GROW_MS,0,1),x=s.xf*W,y=ground(x)+2;
+    const {pal,v,side}=sapStyle(s.seed);
+    const sway=(S.wind*.06+Math.sin(t*1.6+s.seed)*(.01+.04*S.wind))*AMP;
+    ctx.fillStyle=ctx.strokeStyle=C.ink;
+    if(g<.1){
+      const h=(4+g/.1*10)*Math.max(.8,k),tx=x+Math.sin(sway)*h,ty=y-h;
+      ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(tx,ty);ctx.stroke();
+      const ls=clamp(g/.1,.3,1)*.55*Math.max(.8,k);
+      drawLeafRaw(tx,ty,-Math.PI*.8+sway,ls,C.olive);drawLeafRaw(tx,ty,-Math.PI*.2+sway,ls,C.olive);
+      continue;
+    }
+    const gg=(g-.1)/.9,h=10+gg*T*.2,tx=x+Math.sin(sway)*h,ty=y-Math.cos(sway)*h;
+    ctx.lineWidth=Math.max(2,gg*T*.018);ctx.lineCap='butt';
+    ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(tx,ty);ctx.stroke();
+    const rot=s.seed%6+sway*4;
+    const g2=clamp((gg-.45)/.3,0,1),g3=clamp((gg-.7)/.3,0,1);
+    const limb=(f,ang,len,gr,rr)=>{if(gr<=0)return;const sx=x+Math.sin(sway)*h*f,sy=y-Math.cos(sway)*h*f,A=sway*1.4+ang;
+      const ex=sx+Math.sin(A)*len*gr,ey=sy-Math.cos(A)*len*gr;ctx.lineWidth=Math.max(1.5,gg*T*.01);ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(ex,ey);ctx.stroke();
+      drawCrown(ex,ey,rr*gr,rot+1.3,pal,v+1)};
+    limb(.6,side*.95,h*.45,g2,T*.05);
+    limb(.75,-side*1.0,h*.4,g3,T*.042);
+    drawCrown(tx,ty,T*(.02+.06*gg),rot,pal,v);
+  }
+}
+function sapStyle(seed){const R=rng(seed);return{pal:PALS[Math.floor(R()*PALS.length)],v:Math.floor(R()*5),side:R()<.5?-1:1}}
+function drawLeafRaw(x,y,a,s,color){ctx.save();ctx.translate(x,y);ctx.rotate(a);ctx.scale(s,s);ctx.fillStyle=color;ctx.fill(leafP);grain(leafP,1/s);ctx.restore()}
+// the grove lasts only as long as the page: a refresh starts with a bare hill
+function saveGrove(){}
+function loadGrove(){saplings=[];try{localStorage.removeItem('eiche-grove')}catch(e){}}
+
+/* ============================================================
+   word (tertiary) + shape buttons (group)
+   ============================================================ */
+function buildControls(){
+  word=document.createElement('button');word.className='type';word.dataset.spec='word';
+  word.innerHTML='<span></span>';document.getElementById('wordmark').appendChild(word);
+  word.addEventListener('click',()=>{S.level=(S.level+1)%3;syncControls()});
+  const grp=document.createElement('div');grp.setAttribute('role','radiogroup');grp.setAttribute('aria-label','Wind');hits.appendChild(grp);
+  shapes.forEach((s,i)=>{
+    s.btn=makeHit(s.label,s.kind,'hit'+(s.kind==='circle'?'':' sq'));grp.appendChild(s.btn);
+    s.btn.setAttribute('role','radio');wireHover(s);
+    s.btn.addEventListener('click',()=>{S.level=i;syncControls()});
+    s.btn.addEventListener('keydown',e=>{
+      const d={ArrowRight:1,ArrowDown:1,ArrowLeft:-1,ArrowUp:-1}[e.key];if(!d)return;e.preventDefault();
+      S.level=(S.level+d+3)%3;syncControls();shapes[S.level].btn.focus();
+    });
+  });
+  syncControls();
+}
+function syncControls(){
+  shapes.forEach((s,i)=>{s.btn.setAttribute('aria-checked',S.level===i?'true':'false');s.btn.tabIndex=S.level===i?0:-1});
+  const name=NAMES[S.level],span=word.firstChild;
+  if(span.textContent!==name){
+    span.textContent=name;
+  }
+  word.setAttribute('aria-label',`Wind: ${name}. Change wind`);
+}
+
+/* ============================================================
+   captions, whisper, toast
+   ============================================================ */
+function hideWhisper(){}
+function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.style.opacity=1;clearTimeout(el._t);el._t=setTimeout(()=>el.style.opacity=0,1800)}
+function updateCaption(t){
+  let txt='',x=0,y=0;
+  for(const o of acorns)if(o.hover||o.focus){const p=acornPose(o,t);txt=o.on&&o.grow>=1?'Plant':'Not yet';x=p.x;y=p.y}
+  for(const o of leaves)if(o.hover||o.focus){const p=leafPose(o,t);txt=o.on?'Let go':'';x=p.x;y=p.y}
+  for(const s of shapes)if(s.hover||s.focus){txt=s.label;x=s.x;y=s.y-s.sz*.2}
+  if(txt){caption.textContent=txt;caption.style.transform=`translate(${Math.round(x+20)}px,${Math.round(y-34)}px)`;caption.style.opacity=1}
+  else caption.style.opacity=0;
+}
+
+/* ============================================================
+   loop
+   ============================================================ */
+function resize(){
+  const dpr=Math.min(2,devicePixelRatio||1);
+  W=innerWidth;H=innerHeight;cv.width=W*dpr;cv.height=H*dpr;cv.style.width=W+'px';cv.style.height=H+'px';
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  T=Math.min(H*.66,W*.8);k=T/600;leafP=leafShape(20);
+  layout();
+}
+const place=(b,x,y)=>{b.style.transform=`translate(${x-b.offsetWidth/2}px,${y-b.offsetHeight/2}px)`};
+
+let last=performance.now(),saveT=0;
+function frame(now){
+  const dt=Math.min(.05,(now-last)/1000);last=now;const t=now/1000;
+  const target=LEVELS[S.level];
+  const gust=.8+.2*Math.sin(t*.31)*Math.sin(t*.17+2)+.12*Math.sin(t*1.3);
+  S.wind+=(target*gust-S.wind)*Math.min(1,dt*.8);
+  if(S.speed>1)for(const s of saplings)s.born-=dt*1000*(S.speed-1);
+  saveT+=dt;if(saveT>5){saveT=0;saveGrove()}
+
+  drawBackdrop(t,dt);
+  drawHill();
+  drawSaplings(t);
+  drawOak(t);
+
+  for(const o of leaves){
+    if(!o.on){o.regrow-=dt*S.speed;if(o.regrow<=0){o.on=true;o.grow=0;setDisabled(o.btn,false,'Let a leaf go')}}
+    if(o.on&&o.grow<1)o.grow=Math.min(1,o.grow+dt*.6);
+    const p=leafPose(o,t),s=AS()*o.grow*(o.press?.9:1);
+    if(o.on)drawLeaf(p.x,p.y,p.a,s,o.hover||o.focus?C.sage:C.olive);
+    else{ctx.strokeStyle=C.ink;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(p.x+Math.cos(p.a)*4,p.y+Math.sin(p.a)*4);ctx.stroke()}
+    place(o.btn,p.x+Math.cos(p.a)*10*AS(),p.y+Math.sin(p.a)*10*AS());
+  }
+  for(const o of acorns){
+    if(!o.on){o.regrow-=dt*S.speed;if(o.regrow<=0){o.on=true;o.grow=0;setDisabled(o.btn,false,'Plant an acorn')}}
+    if(o.on&&o.grow<1)o.grow=Math.min(1,o.grow+dt*.5);
+    const p=acornPose(o,t),s=AS();
+    const glint=Math.pow(Math.max(0,Math.sin(t*.6+o.phase*5)),30);
+    const lit=o.on&&(o.hover||o.focus);
+    if(o.on)drawAcorn(p.x,p.y,p.rot,s*(o.press?.86:1)*(.3+.7*o.grow),{hover:lit,glint});
+    else drawAcorn(p.x,p.y,p.rot,s,{capOnly:true});
+    place(o.btn,p.x,p.y);
+  }
+
+  stepFallers(dt);
+  for(const f of fallers)drawAcorn(f.x,f.y,f.rot,AS(),{alpha:f.alpha,stalk:false});
+  stepDust(dt);
+  stepDrifters(dt,t);
+
+  drawFooter();
+  drawLedger();
+  drawShapes();
+  for(const s of shapes)place(s.btn,s.x,s.y);
+
+
+  updateCaption(t);
+  requestAnimationFrame(frame);
+}
+
+/* ============================================================
+   boot
+   ============================================================ */
+addEventListener('pointermove',e=>{mx=e.clientX;my=e.clientY});
+addEventListener('resize',resize);
+addEventListener('keydown',e=>{
+  const key=e.key.toLowerCase();
+  if(e.metaKey||e.ctrlKey||e.altKey)return;
+  if(key==='s')toggleSpec();
+  else if(key==='f'){S.speed=S.speed>1?1:30;toast(S.speed>1?'time moves quickly':'time slows down')}
+  else if(key==='r'){saplings=[];saveGrove();announceGrove();toast('the hill is bare again')}
+});
+const specBtn=document.getElementById('specToggle');
+const sheetEl=document.getElementById('sheet');
+sheetEl.addEventListener('scroll',()=>document.body.classList.toggle('faded',sheetEl.scrollTop>8));
+function toggleSpec(force){
+  const on=document.body.classList.toggle('spec',force);
+  if(on){buildSheet();sheetEl.scrollTop=0}
+  document.body.classList.toggle('faded',on&&sheetEl.scrollTop>8);
+  specBtn.setAttribute('aria-expanded',on);specBtn.textContent=on?'close':'spec';
+}
+addEventListener('keydown',e=>{if(e.key==='Escape')toggleSpec(false)});
+
+/* ============================================================
+   specimen sheet: every component drawn by the same code as the scene, frozen in each state
+   ============================================================ */
+const SPEC='#1f4f86',Z=2.4;
+function cell(fn,w=150,h=150){
+  const c=document.createElement('canvas'),dpr=Math.min(2,devicePixelRatio||1);
+  c.width=w*dpr;c.height=h*dpr;c.style.width=w+'px';c.style.height=h+'px';
+  const g=c.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);
+  const prev=ctx;ctx=g;NOGRAIN=true;
+  try{fn()}finally{ctx=prev;NOGRAIN=false}
+  return c;
+}
+function chip(x,y,txt){
+  ctx.font='600 10px Jost';ctx.letterSpacing='2.4px';const w=ctx.measureText(txt).width+14;
+  ctx.fillStyle=C.paper;ctx.fillRect(x,y,w,20);ctx.strokeStyle=C.ink;ctx.lineWidth=1;ctx.strokeRect(x+.5,y+.5,w-1,19);
+  ctx.fillStyle=C.ink;ctx.textBaseline='middle';ctx.fillText(txt,x+8,y+10.5);ctx.letterSpacing='0px';
+}
+function dimH(x1,x2,y,label){
+  ctx.strokeStyle=ctx.fillStyle=SPEC;ctx.lineWidth=1;ctx.beginPath();
+  ctx.moveTo(x1,y);ctx.lineTo(x2,y);ctx.moveTo(x1,y-4);ctx.lineTo(x1,y+4);ctx.moveTo(x2,y-4);ctx.lineTo(x2,y+4);ctx.stroke();
+  ctx.font='500 10px Jost';ctx.textAlign='center';ctx.textBaseline='top';ctx.fillText(label,(x1+x2)/2,y+4);ctx.textAlign='left';
+}
+function dimV(y1,y2,x,label){
+  ctx.strokeStyle=ctx.fillStyle=SPEC;ctx.lineWidth=1;ctx.beginPath();
+  ctx.moveTo(x,y1);ctx.lineTo(x,y2);ctx.moveTo(x-4,y1);ctx.lineTo(x+4,y1);ctx.moveTo(x-4,y2);ctx.lineTo(x+4,y2);ctx.stroke();
+  ctx.font='500 10px Jost';ctx.textBaseline='middle';ctx.fillText(label,x+6,(y1+y2)/2);
+}
+function hitArea(x,y,r,sq){ctx.save();ctx.setLineDash([3,3]);ctx.strokeStyle=SPEC;ctx.lineWidth=1;ctx.beginPath();sq?ctx.rect(x-r,y-r,2*r,2*r):ctx.arc(x,y,r,0,TAU);ctx.stroke();ctx.restore()}
+function ring(x,y,r,sq){ctx.strokeStyle=C.ink;ctx.lineWidth=2;ctx.beginPath();sq?ctx.rect(x-r,y-r,2*r,2*r):ctx.arc(x,y,r,0,TAU);ctx.stroke()}
+const STATES=['Default','Hover','Pressed','Disabled','Focus'];
+function row(no,name,role,cells,meta,labels=STATES){
+  const r=document.createElement('div');r.className='row';
+  r.innerHTML=`<div class="rh"><div class="no">${no}</div><div class="nm">${name}</div><div class="role">${role}</div></div>`;
+  cells.forEach((c,i)=>{const w=document.createElement('div');w.className='cw';w.innerHTML=`<em>${labels[i]}</em>`;w.appendChild(c);r.appendChild(w)});
+  const dl=document.createElement('dl');dl.className='meta';dl.innerHTML=meta.map(([a,b])=>`<dt>${a}</dt><dd>${b}</dd>`).join('');r.appendChild(dl);
+  return r;
+}
+function wordCell(cls,disabled){
+  const b=document.createElement('button');b.className='type '+cls;b.tabIndex=-1;b.setAttribute('aria-hidden','true');
+  b.innerHTML='<span>Breeze</span>';if(disabled)b.setAttribute('aria-disabled','true');return b;
+}
+function buildSheet(){
+  const plate=document.getElementById('plate');
+  const sw=(hex,name)=>`<div class="sw"><b style="background:${hex}"></b>${name}<small>${hex.toUpperCase()}</small></div>`;
+  plate.innerHTML=`
+  <header class="ph">
+    <div><div class="kicker">IXD-404 · Week 8 · Buttons · Set 02</div>
+    <div class="kicker">Specimen sheet · every interactive element in every state · drawn at ${Z}×</div></div>
+    <div class="marks"><i class="m-c"></i><i class="m-s"></i><i class="m-t"></i></div>
+  </header>
+  <section class="sec"><h3>Colour</h3><div class="sws">
+    ${sw(C.paper,'Paper')}${sw(C.ink,'Ink')}${sw(C.red,'Red')}${sw(C.pink,'Pink')}${sw(C.blue,'Blue')}${sw(C.blue2,'Sky blue')}
+    ${sw(C.mustard,'Mustard')}${sw(C.orange,'Orange')}${sw(C.olive,'Olive')}${sw(C.sage,'Sage')}${sw('#5f8a3c','Hill')}${sw(SPEC,'Spec lines')}
+  </div></section>
+  <section class="sec"><h3>Type · Jost (a Futura revival)</h3><div class="types">
+    <div><b style="font:800 64px Jost">Aa</b>Title · 800 · 56–150 fluid · −0.01em</div>
+    <div><b style="font:700 44px Jost">Aa</b>Wind word · 700 · 30–46 fluid · +0.01em</div>
+    <div><b style="font:600 13px Jost;letter-spacing:.3em">LABELS</b>Labels &amp; captions · 600 · 11–12 · +0.24–0.32em · caps</div>
+  </div></section>
+  <div class="scroll"><div class="table">
+    <div class="gh"><span></span>${STATES.map(s=>`<span class="kicker">${s}</span>`).join('')}<span class="kicker">Measurements &amp; behaviour</span></div>
+  </div></div>
+  <section class="sec notes">
+    <p>Every element is a real &lt;button&gt; laid over the canvas and moved each frame, so mouse, touch and keyboard all work. Visual sizes scale with the tree (k = tree size ÷ 600). Hit areas stay 44 px.</p>
+    <p>Texture: a 200 px grain tile filled into each shape in its own coordinates, so it moves with that shape. Dark specks at 30% (multiply), light specks at 20%.</p>
+    <p>Wind: calm .08 · breeze .45 · gale 1.0, eased toward the target at 0.8 /s with slow gusts. Crowns turn up to .35 rad; limbs bend up to .11 rad.</p>
+    <p>Keys: <kbd>S</kbd> this sheet · <kbd>Esc</kbd> close · <kbd>F</kbd> fast-forward ×30 · <kbd>R</kbd> clear the grove · <kbd>?demo</kbd> drops every acorn.</p>
+  </section>`;
+  const tbl=plate.querySelector('.table'),cx=75,cy=72;
+
+  tbl.appendChild(row('01','Acorn','Primary · icon only',[
+    cell(()=>{hitArea(cx,cy,22*Z/1.15);drawAcorn(cx,cy,0,Z,{});dimH(cx-6*Z,cx+6*Z,cy+42,'Ø 12');dimV(cy-11*Z,cy+10*Z,cx+44,'22')}),
+    cell(()=>{drawAcorn(cx,cy,0,Z,{hover:true});chip(cx+10,16,'PLANT')}),
+    cell(()=>drawAcorn(cx,cy,0,Z*.86,{})),
+    cell(()=>drawAcorn(cx,cy,0,Z,{capOnly:true})),
+    cell(()=>{drawAcorn(cx,cy,0,Z,{});ring(cx,cy,22*Z/1.15+3)}),
+  ],[['Visual','nut Ø 12 + ink half-disc cap Ø 15, stalk 6 (at k = 1)'],['Hit','44 × 44 circle'],['Default','#F1B73A nut; hangs from a crown edge and swings; paper glint about every 10 s'],
+     ['Hover','#E8673A nut, 2 px ink ring, drops 3 px and leans toward the cursor, label “Plant”'],['Pressed','scale .86'],['Disabled','hollow cap for 40 s, label “Not yet”'],
+     ['Action','falls, bounces, rolls downhill without reversing, rocks once, plants; grows over 4 min']]));
+
+  const lx=cx-10*Z;
+  tbl.appendChild(row('02','Leaf','Secondary · icon only',[
+    cell(()=>{hitArea(cx,cy,22*Z/1.15);drawLeaf(lx,cy,0,Z,C.olive);dimH(lx,lx+20*Z,cy+42,'20');dimV(cy-6.8*Z/1.9,cy+6.8*Z/1.9,lx+20*Z+10,'13')}),
+    cell(()=>{drawLeaf(lx,cy,0,Z,C.sage);chip(cx+4,16,'LET GO')}),
+    cell(()=>drawLeaf(lx,cy,.4,Z*.9,C.olive)),
+    cell(()=>{ctx.strokeStyle=C.ink;ctx.lineWidth=2*Z/1.5;ctx.beginPath();ctx.moveTo(lx,cy);ctx.lineTo(lx+4*Z,cy);ctx.stroke()}),
+    cell(()=>{drawLeaf(lx,cy,0,Z,C.olive);ring(cx,cy,22*Z/1.15+3)}),
+  ],[['Visual','vesica 20 × 13, points out from the crown, ink midrib'],['Hit','44 × 44 circle'],['Default','#6F8A3A'],['Hover','#A7B47A, flutters 3× faster, label “Let go”'],
+     ['Pressed','scale .9, folds 0.4 rad'],['Disabled','ink stub for 30 s'],['Action','detaches and drifts on the wind, rests on the hill, fades after 5 s']]));
+
+  const wc=(cls,dis)=>{const d=document.createElement('div');d.appendChild(wordCell(cls,dis));return d};
+  tbl.appendChild(row('03','Wind word','Tertiary · text only',[wc(''),wc('is-hover'),wc('is-pressed'),wc('',true),wc('is-focus')],
+    [['Type','Jost Bold 700, 30–46 px fluid (shown at 40), +0.01em'],['Box','min height 44; padding 4 / 0 / 12'],['Default','ink #1B1A17, under a static “WIND” label'],
+     ['Hover','#D8352A text, 6 px red bar'],['Pressed','2 px down, 10 px bar'],['Disabled','ink at 22%, no bar'],['Action','shows the wind; click for the next (Calm → Breeze → Gale). The word swaps instantly.']]));
+
+  const trio=(st,which=1)=>cell(()=>{const sz=30*1.15,g=12;['circle','square','triangle'].forEach((kind,i)=>{
+    const sh={kind,x:cx+(i-1)*(sz+g),y:cy,sz,fill:[C.blue,C.red,C.mustard][i]};
+    drawShape(sh,i===which||st==='disabled'?{[st]:true}:{})});
+    if(st==='default'){hitArea(cx,cy,22*1.15,true);dimH(cx-sz/2*.9,cx+sz/2*.9,cy+40,'30');dimH(cx+sz*.45,cx+sz/2+g+sz*.05,cy-44,'18 gap')}
+    if(st==='focus'){ring(cx,cy,22*1.15+3,true)}
+  });
+  tbl.appendChild(row('04','Wind shapes','Group · single selection',[trio('default'),trio('hover'),trio('press'),trio('disabled'),trio('sel')],
+    [['Visual','circle / square / triangle, 30, 18 apart, 2 px ink stroke'],['Hit','44 × 44 each; role radiogroup, ← → to move'],['Default','outline only'],
+     ['Hover','paper fill #F8F1E2, label Calm / Breeze / Gale'],['Pressed','fills and drops 3 px toward a 4 px ink offset shadow'],['Disabled','dashed ink at 35% (not used in the scene)'],
+     ['Selected','blue / red / mustard fill on a 4 px ink offset shadow']],['Default','Hover','Pressed','Disabled','Selected']));
+
+  const tileCell=v=>cell(()=>{if(v<0){drawTile(cx-24,cy-24,48,null);dimH(cx-24,cx+24,cy+34,'24')}else{const pal=PALS[v%PALS.length];drawTile(cx-24,cy-24,48,pal,v)}});
+  tbl.appendChild(row('05','Grove ledger','Status · not a button',[tileCell(-1),tileCell(0),tileCell(1),tileCell(2),tileCell(3)],
+    [['Visual','nine 24 × 24 tiles (18–26 fluid), 6 apart, centred in the footer'],['Empty','1 px ink at 30%'],['Filled','the planted tree’s colours and crown pattern, 1.5 px ink border'],
+     ['Label','GROVE · n / 9, Jost 600 11 px, +3.5 px'],['A11y','announced in a live region when a tree is planted']],
+    ['Empty','Quarters','Halves','Rings','Bands']));
+}
+specBtn.addEventListener('click',()=>toggleSpec());
+addEventListener('beforeunload',saveGrove);
+
+loadGrove();resize();makeGrain();buildTreeButtons();buildControls();
+requestAnimationFrame(frame);
+// a #spec link opens straight onto the specimen sheet
+if(location.hash==='#spec')document.fonts.ready.then(()=>toggleSpec(true));
+if(new URLSearchParams(location.search).has('demo'))setTimeout(()=>{saplings=[];acorns.forEach((o,i)=>setTimeout(()=>dropAcorn(o),i*350))},1200);
+</script>
+</body>
+</html>

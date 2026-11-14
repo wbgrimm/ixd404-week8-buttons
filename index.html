@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IXD-404 W8 Buttons</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@500;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#efe4cc;--ink:#1b1a17;--red:#d8352a;--blue:#2e6ea6;--mustard:#f1b73a;--hover:#f8f1e2}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--paper);color:var(--ink);font-family:"Jost",Futura,sans-serif}
+main{max-width:1100px;margin:0 auto;padding:clamp(32px,7vh,80px) 4vw 60px}
+.kicker{font:600 11px/1.6 "Jost";letter-spacing:.3em;text-transform:uppercase}
+header{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;border-bottom:3px solid var(--ink);padding-bottom:18px;margin-bottom:36px}
+.marks{display:flex;gap:12px;align-items:flex-end}
+.marks i{display:block;width:36px;height:36px}
+.c{border-radius:50%;background:var(--blue)}.s{background:var(--red)}
+.t{width:0!important;height:0!important;border-left:20px solid transparent;border-right:20px solid transparent;border-bottom:36px solid var(--mustard)}
+.sets{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:28px}
+a.set{display:block;color:inherit;text-decoration:none;border:2px solid var(--ink);padding:24px 24px 22px;box-shadow:6px 6px 0 var(--ink);transition:transform .08s,box-shadow .08s,background .12s}
+a.set:hover{background:var(--hover)}
+a.set:active{transform:translate(6px,6px);box-shadow:0 0 0 var(--ink);background:var(--mustard)}
+a.set:focus-visible{outline:2px solid var(--ink);outline-offset:6px}
+.set b{display:block;font:800 clamp(40px,6vw,72px)/.9 "Jost";letter-spacing:-.01em;margin:10px 0 14px}
+.set p{font:500 14px/1.5 "Jost";margin:0;max-width:44ch}
+.set .go{display:inline-block;margin-top:18px;font:600 11px/1 "Jost";letter-spacing:.3em;text-transform:uppercase;border-bottom:3px solid var(--red);padding-bottom:4px}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div><div class="kicker">IXD-404 · Week 8</div><div class="kicker">Buttons · two sets, two tones</div></div>
+    <div class="marks" aria-hidden="true"><i class="c"></i><i class="s"></i><i class="t"></i></div>
+  </header>
+  <div class="sets">
+    <a class="set" href="chateau.html"><span class="kicker">Set 01</span><b>Château</b>
+      <p>A house of cards built one button at a time. Play cards from your hand in a row to make poker hands, and chain them before the timer runs out.</p><span class="go">Play →</span></a>
+    <a class="set" href="eiche.html"><span class="kicker">Set 02</span><b>Eiche</b>
+      <p>An oak on a hill in flat Bauhaus colour, with acorns, leaves, wind and a grove all built from buttons.</p><span class="go">Open →</span></a>
+  </div>
+</main>
+</body>
+</html>
