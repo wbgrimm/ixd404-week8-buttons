@@ -128,6 +128,13 @@ h1#title,#sub{transition:color .5s ease}
   font:600 11px/1 "Jost",sans-serif;letter-spacing:.3em;text-transform:uppercase;color:rgba(27,26,23,.55);padding:14px 0 14px 10px;min-height:44px}
 #specToggle:hover,#specToggle:focus-visible{color:var(--ink);outline:none}
 
+#backLink{position:fixed;right:calc(4vw + 64px);top:3vh;z-index:22;display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 10px;
+  font:600 11px/1 "Jost",sans-serif;letter-spacing:.3em;text-transform:uppercase;text-decoration:none;color:rgba(27,26,23,.55)}
+#backLink svg{width:14px;height:10px;display:block}
+#backLink:hover,#backLink:focus-visible{color:var(--ink);outline:none}
+#backLink:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+body.spec #backLink{color:var(--ink)}
+
 /* ---------- specimen sheet ---------- */
 #sheetBg{position:fixed;inset:0;z-index:19;background:var(--paper);display:none}
 #sheet{position:fixed;inset:0;z-index:21;overflow:auto;display:none}
@@ -206,6 +213,7 @@ dl.meta dd{margin:0}
 <div id="caption" aria-hidden="true"></div>
 <div id="toast" aria-hidden="true"></div>
 <div id="status" class="sr" aria-live="polite"></div>
+<a id="backLink" href="./" aria-label="Back to the menu"><svg viewBox="0 0 14 10" aria-hidden="true"><path d="M5 1 1 5l4 4M1 5h13" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>Menu</a>
 <button id="specToggle" aria-expanded="false" aria-controls="sheet">spec</button>
 
 <div id="sheetBg"></div>
