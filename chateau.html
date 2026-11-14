@@ -270,16 +270,20 @@ function evaluate(cs){
   }
   return null;
 }
-/* The newest card is checked with the 1–4 cards played just before it. A bigger hand can absorb a
-   smaller one it contains (pair → three of a kind → full house), scoring only the difference,
-   so a run never counts the same cards twice. */
+/* The newest card is checked with the 1–4 cards played just before it, and the best hand it completes scores.
+   Hands can lead into each other: a new hand may share up to two cards with hands that already scored
+   (a pair's second 9 can start a straight). A hand that swallows an earlier one whole (pair → three of a kind
+   → full house, pair → two pair) upgrades it and scores only the difference. Sharing more than two cards
+   with a hand it doesn't swallow (a sixth heart re-making a flush) doesn't count. Ties go to the bigger hand. */
 function bestMove(hist,sc){
   const i=hist.length-1;let best=null;
   for(let L=2;L<=5;L++){const s=i-L+1;if(s<0)break;
     const h=evaluate(hist.slice(s).map(x=>x.card));if(!h)continue;
-    const prior=sc.filter(x=>x.idxs.some(j=>j>=s));if(prior.some(x=>x.idxs.some(j=>j<s)))continue;
+    const prior=sc.filter(x=>x.idxs.every(j=>j>=s)),shared=new Set();
+    sc.forEach(x=>{if(!prior.includes(x))x.idxs.forEach(j=>{if(j>=s)shared.add(j)})});
+    if(shared.size>2)continue;
     const gain=HANDS[h].pts-prior.reduce((a,x)=>a+x.pts,0);
-    if(gain>0&&(!best||gain>best.gain))best={h,gain,prior,idxs:Array.from({length:L},(_,n)=>s+n)}}
+    if(gain>0&&(!best||gain>best.gain||(gain===best.gain&&ORDER.indexOf(h)>ORDER.indexOf(best.h))))best={h,gain,prior,idxs:Array.from({length:L},(_,n)=>s+n)}}
   return best;
 }
 
@@ -694,7 +698,7 @@ function buildSheet(){
     <ol>${ORDER.map(h=>`<li><span style="opacity:1;font:600 13px/1.2 Jost">${HANDS[h].n}</span><span>${HANDS[h].pat}</span><b>${HANDS[h].pts}</b></li>`).join('')}</ol>
     <div>
       <p>Hands are made from cards played <b>one after another</b>. Each card is checked against the 1–4 cards played just before it, and the best hand it completes scores.</p>
-      <p>A bigger hand can absorb a smaller one inside it: a pair, then a third of that rank, scores 50 and then 150 more, which is three of a kind's 200. No card counts twice.</p>
+      <p>Hands lead into each other. A bigger hand can swallow a smaller one inside it and pays the difference: pair (50) → three of a kind (+100) → full house (+2,350), or pair → two pair (+50). A new hand can also share up to two cards with hands that already scored, so the second 9 of a pair can start a straight (9 9 10 J Q K scores the pair and then the straight). Sharing more than two cards doesn't count, so a sixth heart can't re-make the flush.</p>
       <p><b>Chain.</b> Every play that scores raises the chain one step (×1 → ×1.5 → ×2 → ×2.5 → ×3) and refills an 8-second timer, drawn as a bar under the meter (red in the last 2.5 s). A card that scores nothing doesn't refill it, but doesn't break the chain either: only the timer running out drops the chain to zero. The timer pauses while this sheet is open.</p>
       <p><b>Balance.</b> Easy hands pay little and hard ones a lot: a perfect tower of nothing but pairs, fully chained, tops out around 800 at ×1 hand size, still less than a single straight (1,500). Nothing tells you what a card will score; reading the hand is the game.</p>
       <p>Hand size sets the multiplier: <b>7 cards ×1 (easy, the default) · 5 cards ×2 · 3 cards ×3</b>. A tower holds 15 cards (6 across the bottom row), and the best score is kept between visits.</p>
