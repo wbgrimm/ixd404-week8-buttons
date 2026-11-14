@@ -242,6 +242,8 @@ const MAIN={hearts:C.red,diamonds:C.orange,spades:C.blue,clubs:C.olive};
 const EDGE={hearts:C.red,diamonds:C.mustard,spades:C.blue,clubs:C.olive};
 const SOFT={hearts:C.pink,diamonds:C.orange,spades:C.blue2,clubs:C.sage};
 const SIZES=[{n:7,f:C.mustard,m:1,lv:'Easy'},{n:5,f:C.red,m:2,lv:'Medium'},{n:3,f:C.blue,m:3,lv:'Hard'}];
+/* every card also scores its face value: 2–10 as printed, J 11, Q 12, K 13, A 20 */
+const cardVal=c=>c.rank==='A'?20:{J:11,Q:12,K:13}[c.rank]||+c.rank;
 const cardName=c=>`${RN[c.rank]||c.rank} of ${SN[c.suit]}`;
 
 /* ============================================================
@@ -401,6 +403,7 @@ function play(i){
   const k=nextSlot++;history.push({card:hc.card,k});
   const res=scorePlay(history,scored,chain),mv=res.mv;{chain=res.chain;if(mv)chainT=CHAIN_T}
   if(mv){scored=scored.filter(x=>!mv.prior.includes(x));scored.push({h:mv.h,idxs:mv.idxs,pts:HANDS[mv.h].pts});score+=res.pts}
+  score+=cardVal(hc.card);
   const lift=hc.hover&&!hc.press?LIFT:0,st={hover:hc.hover,focus:hc.focus};
   flights.push({k,card:hc.card,mv,res,t:0,dur:RM?.12:.5,from:{x:hc.x,y:hc.y-lift,rot:lift?0:hc.rot,s:HS}});
   hand.splice(i,1);const n=dealTo(i);n.hover=st.hover;n.focus=st.focus;
@@ -514,7 +517,7 @@ function update(dt){
     modeT+=dt;for(const b of bodies)if(!b.done&&modeT-b.delay>=.45){b.done=true;deck.unshift(b.card)}
     if(bodies.every(b=>b.done))newTower();
   }
-  const target=flights.length?score-flights.reduce((a,f)=>a+(f.res?f.res.pts:0),0):score;
+  const target=flights.length?score-flights.reduce((a,f)=>a+(f.res?f.res.pts:0)+cardVal(f.card),0):score;
   if(shown!==target){shown=shown<target?Math.min(target,shown+Math.max(1,Math.ceil((target-shown)*dt*8))):target;$('#score').textContent=shown}
 }
 
@@ -640,7 +643,8 @@ function sync(){drawChain();
   $('#towerLbl').textContent=`Tower · ${landed} / ${SLOTS}`;
 }
 function buildLegend(){$('#legend').innerHTML=ORDER.map(h=>`<li data-h="${h}"><span>${HANDS[h].n}</span><span class="pat">${HANDS[h].pat}</span><b>${HANDS[h].pts}</b></li>`).join('')+
-  '<li class="note"><b>Chain</b> · every scoring play adds ×0.5, up to ×3, and refills the timer. Only the timer running out breaks it.</li>'}
+  '<li class="note"><b>Card value</b> · every card you play also scores its value: 2–10 as printed, J 11, Q 12, K 13, A 20.</li>'+
+  '<li class="note" style="padding-top:4px"><b>Chain</b> · every scoring play adds ×0.5, up to ×3, and refills the timer. Only the timer running out breaks it.</li>'}
 addEventListener('pointermove',e=>{mouse.x=e.clientX;mouse.y=e.clientY});
 document.documentElement.addEventListener('pointerleave',()=>{mouse.x=mouse.y=-1e4});
 let toastT;function toast(m){const el=$('#toast');el.textContent=m;el.style.left=cx+'px';el.style.top=Math.max(12,tableY-houseH-48)+'px';el.style.opacity=1;clearTimeout(toastT);toastT=setTimeout(()=>el.style.opacity=0,3200)}
@@ -699,6 +703,7 @@ function buildSheet(){
     <div>
       <p>Hands are made from cards played <b>one after another</b>. Each card is checked against the 1–4 cards played just before it, and the best hand it completes scores.</p>
       <p>Hands lead into each other. A bigger hand can swallow a smaller one inside it and pays the difference: pair (50) → three of a kind (+100) → full house (+2,350), or pair → two pair (+50). A new hand can also share up to two cards with hands that already scored, so the second 9 of a pair can start a straight (9 9 10 J Q K scores the pair and then the straight). Sharing more than two cards doesn't count, so a sixth heart can't re-make the flush.</p>
+      <p><b>Card value.</b> Every card you play also scores its face value, whether or not it makes a hand: 2–10 as printed, J 11, Q 12, K 13, A 20. Card value isn't multiplied by the chain or hand size.</p>
       <p><b>Chain.</b> Every play that scores raises the chain one step (×1 → ×1.5 → ×2 → ×2.5 → ×3) and refills an 8-second timer, drawn as a bar under the meter (red in the last 2.5 s). A card that scores nothing doesn't refill it, but doesn't break the chain either: only the timer running out drops the chain to zero. The timer pauses while this sheet is open.</p>
       <p><b>Balance.</b> Easy hands pay little and hard ones a lot: a perfect tower of nothing but pairs, fully chained, tops out around 800 at ×1 hand size, still less than a single straight (1,500). Nothing tells you what a card will score; reading the hand is the game.</p>
       <p>Hand size sets the multiplier: <b>7 cards ×1 (easy, the default) · 5 cards ×2 · 3 cards ×3</b>. A tower holds 15 cards (6 across the bottom row), and the best score is kept between visits.</p>
@@ -804,7 +809,7 @@ Promise.all(['800 20px Jost','700 20px Jost','600 12px Jost'].map(f=>document.fo
     // a tower 12 cards in, ending on a pair → three of a kind → full house run
     const want=[['K','spades'],['K','hearts'],['K','clubs'],['4','diamonds'],['4','clubs']];
     const push=c=>{history.push({card:c,k:nextSlot});placed[nextSlot++]=c;const res=scorePlay(history,scored,chain),mv=res.mv;{chain=res.chain;if(mv)chainT=CHAIN_T}
-      if(mv){scored=scored.filter(x=>!mv.prior.includes(x));scored.push({h:mv.h,idxs:mv.idxs,pts:HANDS[mv.h].pts});score+=res.pts;lastHand=mv.idxs;addLog(mv,res.pts,false,res)}};
+      if(mv){scored=scored.filter(x=>!mv.prior.includes(x));scored.push({h:mv.h,idxs:mv.idxs,pts:HANDS[mv.h].pts});score+=res.pts;lastHand=mv.idxs;addLog(mv,res.pts,false,res)}score+=cardVal(c)};
     for(const[r,s]of want){const i=deck.findIndex(c=>c.rank===r&&c.suit===s);if(i>=0)deck.splice(i,1)}
     for(let n=0;n<7;n++)push(deck.pop());
     for(const[r,s]of want)push({rank:r,suit:s});
